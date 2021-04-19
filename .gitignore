@@ -2,3 +2,5 @@
 *.log
 *auto_ip.inf
 .vscode
+SFPicarV.sublime-project
+SFPicarV.sublime-workspace

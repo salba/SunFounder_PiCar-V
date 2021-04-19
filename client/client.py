@@ -15,25 +15,29 @@ import sys
 if sys.version_info.major < 3 or sys.version_info.minor < 4:
     raise RuntimeError('At least Python 3.4 is required')
 
-import sys, time, http.client
-from PyQt5 import QtCore, uic, QtWidgets  
 import icons_rc
-from PyQt5.QtCore import QTimer, Qt
+import requests
+import sys, time, http.client
+
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
+from PyQt5 import uic
+from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from urllib.request import urlopen
-import requests
 
-login_screen     = "login_screen.ui" 
+login_screen     = "login_screen.ui"
 running_screen   = "running_screen.ui"
 setting_screen   = "setting_screen.ui"
 calibrate_screen = "calibrate_screen.ui"
 
-# Load the ui files 
+# Load the ui files
 Ui_Login_screen, QtBaseClass     = uic.loadUiType(login_screen)
 Ui_Running_screen, QtBaseClass   = uic.loadUiType(running_screen)
 Ui_Setting_screen, QtBaseClass   = uic.loadUiType(setting_screen)
 Ui_Calibrate_screen, QtBaseClass = uic.loadUiType(calibrate_screen)
- 
+
  # Set speed content, and speed level content
 MAX_SPEED = 100
 MIN_SPEED = 40
@@ -48,7 +52,7 @@ HOST      = '192.168.0.133'
 PORT 	  = '8000'
 autologin = 1
 
-# BASE_URL is variant use to save the format of host and port 
+# BASE_URL is variant use to save the format of host and port
 BASE_URL = 'http://' + HOST + ':'+ PORT + '/'
 
 def __reflash_url__():
@@ -65,10 +69,10 @@ def __read_auto_inf__():
 				ip = line.replace(' ', '').replace('\n','').split(':')[1]
 
 			elif "port" in line:
-				port = line.replace(' ', '').replace('\n','').split(':')[1]	
+				port = line.replace(' ', '').replace('\n','').split(':')[1]
 
 			elif "remember_status" in line:
-				remember_status = line.replace(' ', '').replace('\n','').split(':')[1]	
+				remember_status = line.replace(' ', '').replace('\n','').split(':')[1]
 		fp.close()
 		return ip, port, int(remember_status)
 	except IOError:
@@ -76,7 +80,7 @@ def __read_auto_inf__():
 
 def __write_auto_inf__(ip=None, port=None, rem_status=None):
 	fp = open("auto_ip.inf", 'w')
-	string = "ip: %s \nport: %s\nremember_status: %s\n" %(ip, port, rem_status)  
+	string = "ip: %s \nport: %s\nremember_status: %s\n" %(ip, port, rem_status)
 	fp.write(string)
 	fp.close()
 
@@ -102,8 +106,8 @@ class LoginScreen(QtWidgets.QDialog, Ui_Login_screen):
 			HOST = info[0]
 			PORT = info[1]
 			autologin = info[2]
-	
-		QtWidgets.QDialog.__init__(self)	
+
+		QtWidgets.QDialog.__init__(self)
 		Ui_Login_screen.__init__(self)
 		self.setupUi(self)
 		self.setWindowTitle("Log In - SunFounder PiCar-V Client")
@@ -124,8 +128,8 @@ class LoginScreen(QtWidgets.QDialog, Ui_Login_screen):
 		"""Slot for signal that Login button clicked
 
 		The login button clicked, this function will run. This function use for logining,
-		first, check the length of text in line edit, if ok, saved them to variable HOST 
-		and PORT, after that, call function connection_ok(), if get 'OK' return, login 
+		first, check the length of text in line edit, if ok, saved them to variable HOST
+		and PORT, after that, call function connection_ok(), if get 'OK' return, login
 		succeed, close this screen, show running screen
 
 		Args:
@@ -143,7 +147,7 @@ class LoginScreen(QtWidgets.QDialog, Ui_Login_screen):
 			PORT = self.lEd_port.text()
 			__reflash_url__()
 			self.label_Error.setText("Connecting....")
-			
+
 			# check whethe server is connected
 			if connection_ok() == True: # request respon 'OK', connected
 				if autologin == 1:	# autologin checked, record HOST
@@ -156,32 +160,33 @@ class LoginScreen(QtWidgets.QDialog, Ui_Login_screen):
 				__write_auto_inf__(HOST, PORT, autologin)
 				self.label_Error.setText("")
 				# login succeed, login1 screen close, running screen show, function start_stream() run
-					
+
 				login1.close()
 				running1.start_stream()
 				running1.show()
 				return True
 			# connected failed, set the information
 			else:
+				print("Connection failed")
 				self.label_Error.setText("Failed to connect")
 				return False
-		# the input length in line edit not allowable 
+		# the input length in line edit not allowable
 		else:
 			self.label_Error.setText("Host or port not correct")
 			return False
 		print ("on_pBtn_login_clicked", HOST,PORT,autologin,"\n")
-	
+
 	# pressed and released, each set their stylesheet, so it make a feedback of press
 	def on_pBtn_login_pressed(self):
 		self.pBtn_login.setStyleSheet("border-image: url(./images/login_button_pressed.png);color: rgb(255, 255, 255);")
 	def on_pBtn_login_released(self):
-		self.pBtn_login.setStyleSheet("border-image: url(./images/login_button_unpressed.png);color: rgb(255, 255, 255);")	
+		self.pBtn_login.setStyleSheet("border-image: url(./images/login_button_unpressed.png);color: rgb(255, 255, 255);")
 	def on_pBtn_checkbox_clicked(self):
 		"""Slot for checkbox button clicked signal
 
-		The checkbox button clicked, this function will run. This function use for autologin, 
-		when clicked, the status of autologin(check or not check) will changed, if autologin 
-		checked, save HOST and PORT, and next show this screen, line edit will auto fill with 
+		The checkbox button clicked, this function will run. This function use for autologin,
+		when clicked, the status of autologin(check or not check) will changed, if autologin
+		checked, save HOST and PORT, and next show this screen, line edit will auto fill with
 		the saved value
 
 		Args:
@@ -192,7 +197,7 @@ class LoginScreen(QtWidgets.QDialog, Ui_Login_screen):
 		global autologin
 		# when clicked checkbox button, change value of various autologin
 		autologin = -autologin
-		print('autolongin = %s'%autologin) 
+		print('autolongin = %s'%autologin)
 		if autologin == 1:
 			# the checked picture
 			self.pBtn_checkbox.setStyleSheet("border-image: url(./images/check2.png);")
@@ -208,7 +213,7 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 	that use for the control.
 
 	Attributes:
-		TIMEOUT, how long it time up for QTimer, using to reflash the frame 
+		TIMEOUT, how long it time up for QTimer, using to reflash the frame
 	"""
 	TIMEOUT = 50
 	LEVEL1_SPEED = 40
@@ -222,7 +227,7 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 
 
 	def __init__(self):
-		QtWidgets.QDialog.__init__(self)	
+		QtWidgets.QDialog.__init__(self)
 		Ui_Running_screen.__init__(self)
 		self.setupUi(self)
 
@@ -232,32 +237,32 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 		self.setWindowTitle("Operation - SunFounder PiCar-V Client")
 		self.btn_back.setStyleSheet("border-image: url(./images/back_unpressed.png);")
 		self.btn_setting.setStyleSheet("border-image: url(./images/settings_unpressed.png);")
-	
+
 	def start_stream(self):
 		"""Start to receive the stream
 
-		With this function called, the QTimer start timing, while time up, call reflash_frame() function, 
-		the frame will be reflashed. 
+		With this function called, the QTimer start timing, while time up, call reflash_frame() function,
+		the frame will be reflashed.
 
 		Args:
 			None
 		"""
-		# creat an object queryImage with the HOST  
+		# creat an object queryImage with the HOST
 		self.queryImage = QueryImage(HOST)
 		self.timer = QTimer(timeout=self.reflash_frame)  # Qt timer, time up, run reflash_frame()
 		self.timer.start(RunningScreen.TIMEOUT)  # start timer
-		# init the position 
+		# init the position
 		run_action('fwready')
 		run_action('bwready')
 		run_action('camready')
-	
+
 	def stop_stream(self):
 		self.timer.stop()		# stop timer, so the receive of stream also stop
 
 	def transToPixmap(self):
 		"""Convert the stream data to pixmap data
 
-		First save the queryImage() data, and then creat an object pixmap, call built-in function 
+		First save the queryImage() data, and then creat an object pixmap, call built-in function
 		pixmap.loadFromData(data) to store the data
 
 		Args:
@@ -277,9 +282,9 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 		return pixmap
 
 	def reflash_frame(self):
-		"""Reflash frame on widget label_snapshot 
+		"""Reflash frame on widget label_snapshot
 
-		Use the return value of transToPixmap() to reflash the frame on widget label_snapshot 
+		Use the return value of transToPixmap() to reflash the frame on widget label_snapshot
 
 		Args:
 			None
@@ -291,7 +296,7 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 			self.label_snapshot.setPixmap(pixmap)
 		else :
 			print ("frame lost")
-	
+
 	def level_btn_show(self,speed_level):
 		"""Reflash the view of level_btn
 
@@ -311,21 +316,21 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 		elif speed_level == 2:		# level 2 button is pressed
 			self.level2.setStyleSheet("border-image: url(./images/speed_level_2_pressed.png);")
 		elif speed_level == 3:		# level 3 button is pressed
-			self.level3.setStyleSheet("border-image: url(./images/speed_level_3_pressed.png);")	
+			self.level3.setStyleSheet("border-image: url(./images/speed_level_3_pressed.png);")
 		elif speed_level == 4:		# level 4 button is pressed
-			self.level4.setStyleSheet("border-image: url(./images/speed_level_4_pressed.png);")	
+			self.level4.setStyleSheet("border-image: url(./images/speed_level_4_pressed.png);")
 		elif speed_level == 5:		# level 5 button is pressed
-			self.level5.setStyleSheet("border-image: url(./images/speed_level_5_pressed.png);")	
+			self.level5.setStyleSheet("border-image: url(./images/speed_level_5_pressed.png);")
 
-	def set_speed_level(self, speed):		# set speed to server 
+	def set_speed_level(self, speed):		# set speed to server
 		run_speed(speed)
 
 	def keyPressEvent(self, event):
 		"""Keyboard press event
 
 		Effective key: W, A, S, D, ↑,  ↓,  ←,  →
-		Press a key on keyboard, the function will get an event, if the condition is met, call the function 
-		run_action(). 
+		Press a key on keyboard, the function will get an event, if the condition is met, call the function
+		run_action().
 
 		Args:
 			event, this argument will get when an event of keyboard pressed occured
@@ -335,7 +340,7 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 
 		# don't need autorepeat, while haven't released, just run once
 		if not event.isAutoRepeat():
-			if key_press == Qt.Key_Up:			# up 
+			if key_press == Qt.Key_Up:			# up
 				run_action('camup')
 			elif key_press == Qt.Key_Right:		# right
 				run_action('camright')
@@ -356,8 +361,8 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 		"""Keyboard released event
 
 		Effective key: W,A,S,D, ↑,  ↓,  ←,  →
-		Release a key on keyboard, the function will get an event, if the condition is met, call the function 
-		run_action(). 
+		Release a key on keyboard, the function will get an event, if the condition is met, call the function
+		run_action().
 
 		Args:
 			event, this argument will get when an event of keyboard release occured
@@ -386,27 +391,27 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 	def on_level1_clicked(self):
 		"""Slot for signal that level1 button clicked
 
-		The level1 button clicked, this function will run. Call function level_btn_show() 
+		The level1 button clicked, this function will run. Call function level_btn_show()
 		and function set_speed_level(), level1 set argument '20' to set_speed_level()
 
 		"""
 		self.speed_level = 1
 		self.level_btn_show(self.speed_level)
 		self.set_speed_level(str(self.LEVEL_SPEED[self.speed_level]))				# level 1, speed 20
-	
+
 	def on_level2_clicked(self):
 		self.speed_level = 2
 		self.level_btn_show(self.speed_level)
 		self.set_speed_level(str(self.LEVEL_SPEED[self.speed_level]))				# level 2, speed 40
-	
+
 	def on_level3_clicked(self):
 		self.speed_level = 3
-		self.level_btn_show(self.speed_level)	
+		self.level_btn_show(self.speed_level)
 		self.set_speed_level(str(self.LEVEL_SPEED[self.speed_level]))				# level 3, speed 60
 
 	def on_level4_clicked(self):
 		self.speed_level = 4
-		self.level_btn_show(self.speed_level)			
+		self.level_btn_show(self.speed_level)
 		self.set_speed_level(str(self.LEVEL_SPEED[self.speed_level]))				# level 4, speed 80
 
 	def on_level5_clicked(self):
@@ -421,8 +426,8 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 	def on_btn_back_clicked(self):
 		"""Slot for signal that back button clicked
 
-		The back button clicked, this function will run. Close this screen and stop 
-		stream receive, show login screen 
+		The back button clicked, this function will run. Close this screen and stop
+		stream receive, show login screen
 
 		"""
 		self.close()
@@ -437,13 +442,13 @@ class RunningScreen(QtWidgets.QDialog, Ui_Running_screen):
 	def on_btn_setting_clicked(self):
 		"""Slot for signal that setting button clicked
 
-		The setting button clicked, this function will run. Close this screen and show setting screen 
+		The setting button clicked, this function will run. Close this screen and show setting screen
 
 		"""
 		self.btn_back.setStyleSheet("border-image: url(./images/back_unpressed.png);")
 		self.close()
 		setting1.show()
-		
+
 class SettingScreen(QtWidgets.QDialog, Ui_Setting_screen):
 	"""Setting Screen
 
@@ -454,7 +459,7 @@ class SettingScreen(QtWidgets.QDialog, Ui_Setting_screen):
 		none
 	"""
 	def __init__(self):
-		QtWidgets.QDialog.__init__(self)	
+		QtWidgets.QDialog.__init__(self)
 		Ui_Setting_screen.__init__(self)
 		self.setupUi(self)
 		self.setWindowTitle("Calibration - SunFounder PiCar-V Client")
@@ -500,7 +505,7 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 		none
 	"""
 	def __init__(self):
-		QtWidgets.QDialog.__init__(self)	
+		QtWidgets.QDialog.__init__(self)
 		Ui_Calibrate_screen.__init__(self)
 		self.setupUi(self)
 		self.calibration_status = 0
@@ -511,15 +516,15 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 		self.btn_cancle.setStyleSheet("border-image: url(./images/cancle_unpressed.png);")
 
 	def calibration_show(self, calibration_status):
-		"""Show calibration screen 
+		"""Show calibration screen
 
-		With the argument, show a screen for calibration.argument calibration_status should be 1, 2, or 3, show camera 
+		With the argument, show a screen for calibration.argument calibration_status should be 1, 2, or 3, show camera
 		calibration, front wheel calibration and back wheel calibration screen and enter the calibration mode
 
 		Args:
 			1, 2, 3, will show camera calibration, front wheel calibration and back wheel calibration screen
 		"""
-		self.calibration_status = calibration_status	
+		self.calibration_status = calibration_status
 		if self.calibration_status == 1:				# calibrate camera
 			cali_action('camcali')
 			self.setWindowTitle("Camera Calibration - SunFounder PiCar-V Client")
@@ -549,12 +554,12 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 	def keyPressEvent(self, event):
 		"""Keyboard press event
 
-		Press a key on keyboard, the function will get an event, if the condition is met, call the function 
-		run_action(). 
+		Press a key on keyboard, the function will get an event, if the condition is met, call the function
+		run_action().
 		In camera calibration mode, Effective key: W,A,S,D, ↑,  ↓,  ←,  →, ESC
 		In front wheel calibration mode, Effective key: A, D, ←,  →, ESC
 		In back wheel calibration mode, Effective key: A, D, ←,  →, ESC
-		
+
 		Args:
 			event, this argument will get when an event of keyboard pressed occured
 
@@ -592,7 +597,7 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 				cali_action('forward')
 		elif key_press == Qt.Key_Escape:			# ESC
 			run_action('stop')
-			self.close()			
+			self.close()
 
 	def on_btn_test_pressed(self):
 		self.btn_test.setStyleSheet("border-image: url(./images/test_pressed.png);")
@@ -624,7 +629,7 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 			run_action('fwready')
 		elif self.calibration_status == 3:
 			pass
-			
+
 	def on_btn_ok_pressed(self):
 		self.btn_ok.setStyleSheet("border-image: url(./images/ok_pressed.png);")
 	def on_btn_ok_released(self):
@@ -638,7 +643,7 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 		elif self.calibration_status == 3:
 			cali_action('bwcaliok')
 			cali_action('stop')
-		self.close()		
+		self.close()
 
 	def on_btn_cancle_pressed(self):
 		self.btn_cancle.setStyleSheet("border-image: url(./images/cancle_pressed.png);")
@@ -653,11 +658,11 @@ class CalibrateScreen(QtWidgets.QDialog, Ui_Calibrate_screen):
 		elif self.calibration_status == 3:
 			run_action('bwready')
 			cali_action('stop')
-		self.close()		
+		self.close()
 
 class QueryImage:
 	"""Query Image
-	
+
 	Query images form http. eg: queryImage = QueryImage(HOST)
 
 	Attributes:
@@ -669,7 +674,7 @@ class QueryImage:
 		self.host = host
 		self.port = port
 		self.argv = argv
-	
+
 	def queryImage(self):
 		"""Query Image
 
@@ -694,7 +699,7 @@ class QueryImage:
 def connection_ok():
 	"""Check whetcher connection is ok
 
-	Post a request to server, if connection ok, server will return http response 'ok' 
+	Post a request to server, if connection ok, server will return http response 'ok'
 
 	Args:
 		none
@@ -702,7 +707,7 @@ def connection_ok():
 	Returns:
 		if connection ok, return True
 		if connection not ok, return False
-	
+
 	Raises:
 		none
 	"""
@@ -746,7 +751,7 @@ def run_action(cmd):
 	# set the url include action information
 	url = BASE_URL + 'run/?action=' + cmd
 	print('url: %s'% url)
-	# post request with url 
+	# post request with url
 	__request__(url)
 
 def run_speed(speed):
@@ -778,21 +783,21 @@ def cali_action(cmd):
 		'fwcali' | 'fwcalileft' | 'fwcaliright' |  'fwcaliok'
 
 		# ================ Camera =================
-		'camcali' | 'camcaliup' | 'camcalidown' | 'camcalileft' | 'camright' | 'camcaliok' 
+		'camcali' | 'camcaliup' | 'camcalidown' | 'camcalileft' | 'camright' | 'camcaliok'
 
 	"""
 	# set the url include cali information
 	url = BASE_URL + 'cali/?action=' + cmd
 	print('url: %s'% url)
-	# post request with url 
+	# post request with url
 	__request__(url)
 
 def main():
 	app = QtWidgets.QApplication(sys.argv)
-	
-	# creat objects 
+
+	# creat objects
 	login1 = LoginScreen()
-	running1 = RunningScreen()	
+	running1 = RunningScreen()
 	setting1   = SettingScreen()
 	calibrate1 = CalibrateScreen()
 
@@ -806,10 +811,10 @@ def main():
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
-	
-	# creat objects 
+
+	# creat objects
 	login1 = LoginScreen()
-	running1 = RunningScreen()	
+	running1 = RunningScreen()
 	setting1   = SettingScreen()
 	calibrate1 = CalibrateScreen()
 
